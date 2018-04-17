@@ -4,19 +4,21 @@ import {
   Loader,
   Segment,
 } from 'semantic-ui-react';
+import axios from 'axios';
 import { setFlash } from '../actions/flash';
 import { connect } from 'react-redux';
 import { setHeaders } from '../actions/headers';
 import braintree from 'braintree-web-drop-in';
 import BraintreeDropin from 'braintree-dropin-react';
 import BraintreeSubmitButton from './BraintreeSubmitButton';
-import axios from 'axios'
+import { Redirect } from 'react-router-dom';
 
 class BraintreeDrop extends React.Component {
-  state = { loaded: false, token: '' }
-
-  handlePaymentMethod = (payload) => {
-    debugger
+  state = { 
+    loaded: false, 
+    token: '' ,
+    redirect: false,
+    transactionID: '',
   }
 
   componentDidMount() {
@@ -29,12 +31,35 @@ class BraintreeDrop extends React.Component {
       })
       .catch( ({ headers }) => {
         dispatch(setHeaders(headers))
-        dispatch(setFlash('BadStuff!', 'red'))
+        dispatch(setFlash('Bad Stuff!', 'red'))
+      })
+  }
+
+  handlePaymentMethod = (payload) => {
+    const { dispatch, amount } = this.props;
+    axios.post('/api/payment', { amount, ...payload } )
+      .then( ({ data: transactionID, headers }) => {
+        dispatch(setHeaders(headers));
+        this.setState({ transactionID, redirect: true })
       })
   }
 
   render() {
-    const { loaded, token } = this.state;
+    const { 
+      loaded, 
+      token,
+      redirect, 
+      transactionID, 
+    } = this.state;
+
+    if (redirect)
+    return (
+      <Redirect to={{ 
+        pathname: '/payment_success',
+        state: { amount: this.props.amount, transactionID}
+        }}
+      />
+    )
 
     if (loaded)
       return (
